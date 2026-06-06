@@ -2,12 +2,13 @@
 // Three-tab navigation bar. Mobile-first: 44px+ touch targets, no hover states.
 
 const TABS = [
-  { id: "play",     icon: "✦",  label: "Play"     },
-  { id: "sky",      icon: "✦",  label: "Sky"      },
-  { id: "settings", icon: "⊙",  label: "Settings" },
+  { id: "play",     icon: "✦",  label: "Play"    },
+  { id: "sky",      icon: "★",  label: "Sky"     },
+  { id: "journal",  icon: "◈",  label: "Journal" },
+  { id: "settings", icon: "⊙",  label: "Settings"},
 ];
 
-export default function BottomNav({ active, onChange, starCount }) {
+export default function BottomNav({ active, onChange, starCount, journalCount }) {
   return (
     <nav style={{
       position: "fixed",
@@ -49,7 +50,9 @@ export default function BottomNav({ active, onChange, starCount }) {
               <span style={{
                 fontSize: tab.id === "sky" ? 18 : 16,
                 color: isActive
-                  ? (tab.id === "sky" ? "#ffcc44" : "#6bcbff")
+                  ? (tab.id === "sky"     ? "#ffcc44"
+                   : tab.id === "journal" ? "#4fc3f7"
+                   : "#6bcbff")
                   : "#8899bb",
                 transition: "color .2s",
                 display: "block",
@@ -57,22 +60,27 @@ export default function BottomNav({ active, onChange, starCount }) {
               }}>
                 {tab.id === "sky" ? "★" : tab.icon}
               </span>
-              {/* Star count badge on Sky tab */}
+              {/* Badge — star count on Sky, entry count on Journal */}
               {tab.id === "sky" && starCount > 0 && (
                 <span style={{
-                  position: "absolute",
-                  top: -5, right: -8,
-                  background: "#ffcc44",
-                  color: "#06080f",
-                  fontSize: 9,
-                  fontWeight: 800,
-                  borderRadius: 8,
-                  padding: "1px 4px",
-                  lineHeight: 1.4,
-                  minWidth: 14,
-                  textAlign: "center",
+                  position: "absolute", top: -5, right: -8,
+                  background: "#ffcc44", color: "#06080f",
+                  fontSize: 9, fontWeight: 800,
+                  borderRadius: 8, padding: "1px 4px",
+                  lineHeight: 1.4, minWidth: 14, textAlign: "center",
                 }}>
                   {starCount}
+                </span>
+              )}
+              {tab.id === "journal" && journalCount > 0 && (
+                <span style={{
+                  position: "absolute", top: -5, right: -8,
+                  background: "#4fc3f7", color: "#06080f",
+                  fontSize: 9, fontWeight: 800,
+                  borderRadius: 8, padding: "1px 4px",
+                  lineHeight: 1.4, minWidth: 14, textAlign: "center",
+                }}>
+                  {journalCount}
                 </span>
               )}
             </div>
@@ -90,5 +98,4 @@ export default function BottomNav({ active, onChange, starCount }) {
       })}
     </nav>
   );
-          }
-          
+}
