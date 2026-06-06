@@ -611,9 +611,8 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
       minHeight:"100svh",
       background:"radial-gradient(ellipse at 30% 20%,#0a1e3d,#04080f 65%)",
       display:"flex", flexDirection:"column", alignItems:"center",
-      justifyContent:"center", padding:"40px 28px 96px",
       justifyContent:"center", fontFamily:"'Segoe UI',sans-serif",
-      padding:24, textAlign:"center",
+      padding:"40px 28px 96px", textAlign:"center",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
