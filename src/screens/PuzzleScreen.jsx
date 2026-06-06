@@ -571,6 +571,8 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
   useEffect(() => {
     if (litCount === totalCrystals && totalCrystals > 0 && !won) {
       const colors = puzzle.crystals.map(c => c.color);
+      // Save star immediately at win moment — don't wait for "Continue" tap
+      onPuzzleSolved(puzzle.id);
       setTimeout(() => { playWinChord(colors); setWon(true); }, 250);
     }
   }, [litCount, totalCrystals, won]);
@@ -585,8 +587,9 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
   const [showHint, setShowHint] = useState(false);
 
   const goNext = () => {
-    // Notify save system — idempotent, safe to call multiple times
-    onPuzzleSolved(puzzle.id);
+    // Pin id FIRST before any state changes — prevents stale closure
+    const solvedId = puzzle.id;
+    onPuzzleSolved(solvedId);
     setSessionCompleted(prev => new Set([...prev, puzzleIdx]));
     setWon(false); setRotations({});
     setPrevLit(new Set()); setShowHint(false);
