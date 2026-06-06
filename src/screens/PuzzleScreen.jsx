@@ -463,33 +463,6 @@ function WallShape({ cell: sz }) {
 }
 
 // ─── Win Toast (non-blocking) ─────────────────────────────────────────────────
-// Replaces the full-screen modal. Puzzle stays visible throughout.
-// Layout: RisingStar floats up from grid, WinToast slides up below grid.
-
-const WIN_CSS = `
-  @keyframes starRise {
-    0%   { transform: translateY(0)   scale(0.4); opacity: 0;   }
-    15%  { opacity: 1; }
-    80%  { opacity: 0.9; }
-    100% { transform: translateY(-220px) scale(1.1); opacity: 0; }
-  }
-  @keyframes toastSlideUp {
-    from { transform: translateY(24px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-  @keyframes continueFadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0);   }
-  }
-  @keyframes beamBrighten {
-    0%,100% { filter: brightness(1); }
-    50%     { filter: brightness(1.7) drop-shadow(0 0 6px #6bcbff); }
-  }
-  @keyframes crystalWin {
-    0%,100% { filter: brightness(1.2) drop-shadow(0 0 6px currentColor); }
-    50%     { filter: brightness(2.2) drop-shadow(0 0 18px currentColor); }
-  }
-`;
 
 // Floating star that rises from the solved crystal position
 function RisingStar({ color, originX, originY }) {
@@ -737,9 +710,30 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
         @keyframes crystalPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.5)} }
         @keyframes gridGlow { 0%,100%{box-shadow:0 0 40px #0a1e3d88} 50%{box-shadow:0 0 55px #0a1e3daa} }
+        @keyframes starRise {
+          0%   { transform: translateY(0) scale(0.4); opacity: 0; }
+          15%  { opacity: 1; }
+          80%  { opacity: 0.9; }
+          100% { transform: translateY(-220px) scale(1.1); opacity: 0; }
+        }
+        @keyframes toastSlideUp {
+          from { transform: translateY(24px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes continueFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0);   }
+        }
+        @keyframes beamBrighten {
+          0%,100% { filter: brightness(1); }
+          50%     { filter: brightness(1.7) drop-shadow(0 0 6px #6bcbff); }
+        }
+        @keyframes crystalWin {
+          0%,100% { filter: brightness(1.2) drop-shadow(0 0 6px currentColor); }
+          50%     { filter: brightness(2.4) drop-shadow(0 0 18px currentColor); }
+        }
         .tap-cell { -webkit-tap-highlight-color: transparent; }
         .tap-cell:active { transform: scale(0.93) !important; }
-        ${WIN_CSS}
       `}</style>
 
       {/* Header */}
