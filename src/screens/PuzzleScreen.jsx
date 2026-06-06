@@ -462,63 +462,125 @@ function WallShape({ cell: sz }) {
   );
 }
 
-// ─── Win Overlay ──────────────────────────────────────────────────────────────
-function WinOverlay({ onNext, isLast }) {
-  const particles = useMemo(() =>
-    Array.from({length:24}, (_,i) => ({
-      id:i, x:Math.random()*100,
-      delay:Math.random()*1.2,
-      dur:1.5+Math.random()*1.5,
-      color:["#ff6b6b","#6bcbff","#a8ff6b","#ffcc44","#cc88ff"][i%5],
-      size:3+Math.random()*7,
-    })), []);
+// ─── Win Toast (non-blocking) ─────────────────────────────────────────────────
+// Replaces the full-screen modal. Puzzle stays visible throughout.
+// Layout: RisingStar floats up from grid, WinToast slides up below grid.
 
+const WIN_CSS = `
+  @keyframes starRise {
+    0%   { transform: translateY(0)   scale(0.4); opacity: 0;   }
+    15%  { opacity: 1; }
+    80%  { opacity: 0.9; }
+    100% { transform: translateY(-220px) scale(1.1); opacity: 0; }
+  }
+  @keyframes toastSlideUp {
+    from { transform: translateY(24px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes continueFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0);   }
+  }
+  @keyframes beamBrighten {
+    0%,100% { filter: brightness(1); }
+    50%     { filter: brightness(1.7) drop-shadow(0 0 6px #6bcbff); }
+  }
+  @keyframes crystalWin {
+    0%,100% { filter: brightness(1.2) drop-shadow(0 0 6px currentColor); }
+    50%     { filter: brightness(2.2) drop-shadow(0 0 18px currentColor); }
+  }
+`;
+
+// Floating star that rises from the solved crystal position
+function RisingStar({ color, originX, originY }) {
   return (
     <div style={{
-      position:"absolute", inset:0, zIndex:50,
-      display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column",
-      background:"radial-gradient(ellipse at center,#08152acc 0%,#000000dd 100%)",
-      backdropFilter:"blur(8px)",
+      position: "absolute",
+      left: originX,
+      top:  originY,
+      pointerEvents: "none",
+      zIndex: 60,
+      animation: "starRise 1.8s cubic-bezier(.2,.8,.4,1) forwards",
     }}>
-      <style>{`
-        @keyframes pr { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-100px) scale(0);opacity:0} }
-        @keyframes wp { 0%{transform:scale(0.4);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
-        @keyframes sh { 0%,100%{opacity:.7} 50%{opacity:1} }
-      `}</style>
-      {particles.map(p=>(
-        <div key={p.id} style={{
-          position:"absolute", left:`${p.x}%`, bottom:"30%",
-          width:p.size, height:p.size, borderRadius:"50%",
-          background:p.color, boxShadow:`0 0 ${p.size*2}px ${p.color}`,
-          animation:`pr ${p.dur}s ${p.delay}s ease-out infinite`,
-          pointerEvents:"none",
-        }}/>
-      ))}
-      <div style={{
-        animation:"wp 0.5s cubic-bezier(.34,1.56,.64,1) forwards",
-        textAlign:"center", padding:"36px 44px",
-        background:"linear-gradient(135deg,#0d1f3c,#060e1e)",
-        border:"1px solid #ffffff1a", borderRadius:20,
-        boxShadow:"0 0 60px #6bcbff33",
-      }}>
-        <div style={{ fontSize:56, animation:"sh 1.8s ease infinite", marginBottom:8 }}>✨</div>
+      <svg width={28} height={28} viewBox="0 0 28 28">
+        <defs>
+          <radialGradient id="rsg">
+            <stop offset="0%"   stopColor="white"  stopOpacity="1"/>
+            <stop offset="40%"  stopColor={color}  stopOpacity="0.9"/>
+            <stop offset="100%" stopColor={color}  stopOpacity="0"/>
+          </radialGradient>
+        </defs>
+        {/* Glow */}
+        <circle cx="14" cy="14" r="12" fill={color} opacity="0.18"/>
+        {/* Star body */}
+        <circle cx="14" cy="14" r="4.5" fill="url(#rsg)"/>
+        {/* Cross sparkle */}
+        <line x1="14" y1="5"  x2="14" y2="23" stroke={color} strokeWidth="1" opacity="0.5"/>
+        <line x1="5"  y1="14" x2="23" y2="14" stroke={color} strokeWidth="1" opacity="0.5"/>
+        <line x1="8"  y1="8"  x2="20" y2="20" stroke={color} strokeWidth="0.6" opacity="0.3"/>
+        <line x1="20" y1="8"  x2="8"  y2="20" stroke={color} strokeWidth="0.6" opacity="0.3"/>
+      </svg>
+    </div>
+  );
+}
+
+// Small toast bar below the grid — never blocks puzzle view
+function WinToast({ onNext, isLast }) {
+  return (
+    <div style={{
+      animation: "toastSlideUp 0.4s cubic-bezier(.34,1.4,.64,1) forwards",
+      marginTop: 14,
+      width: "100%",
+      maxWidth: 500,
+      background: "linear-gradient(135deg, #0a1e3a, #061224)",
+      border: "1px solid #6bcbff22",
+      borderRadius: 14,
+      padding: "14px 20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      boxShadow: "0 0 24px #6bcbff18",
+    }}>
+      <div>
         <div style={{
-          fontFamily:"'Playfair Display',Georgia,serif",
-          fontSize:"2rem", fontWeight:900, color:"#e8f4ff", marginBottom:6,
-        }}>Illuminated</div>
-        <div style={{ color:"#6bcbff88", fontSize:"0.9rem", marginBottom:24 }}>
-          {isLast ? "All light restored." : "The world remembers."}
-        </div>
-        <button onClick={onNext} style={{
-          background:"linear-gradient(135deg,#1a4a7a,#0d2a4a)",
-          color:"#6bcbff", border:"1px solid #6bcbff44",
-          borderRadius:12, padding:"13px 32px",
-          fontSize:"0.95rem", fontWeight:700, cursor:"pointer",
-          letterSpacing:"0.05em", boxShadow:"0 0 20px #6bcbff22",
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: "0.95rem",
+          fontWeight: 700,
+          color: "#e2e8f0",
+          marginBottom: 2,
         }}>
-          {isLast ? "Play Again →" : "Continue →"}
-        </button>
+          ✨ Star Restored
+        </div>
+        <div style={{
+          fontSize: "0.78rem",
+          color: "#6bcbff66",
+          fontStyle: "italic",
+        }}>
+          {isLast ? "All light returned." : "The world remembers."}
+        </div>
       </div>
+      <button
+        onClick={onNext}
+        style={{
+          animation: "continueFadeIn 0.5s 2s ease both", // appears after 2s delay
+          background: "linear-gradient(135deg,#1a4a7a,#0d2a4a)",
+          color: "#6bcbff",
+          border: "1px solid #6bcbff44",
+          borderRadius: 10,
+          padding: "10px 18px",
+          fontSize: "0.85rem",
+          fontWeight: 700,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          letterSpacing: "0.04em",
+          touchAction: "manipulation",
+          WebkitTapHighlightColor: "transparent",
+          minHeight: 44,
+          opacity: 0, // starts invisible, continueFadeIn brings it in
+        }}>
+        {isLast ? "Again →" : "Continue →"}
+      </button>
     </div>
   );
 }
@@ -677,6 +739,7 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
         @keyframes gridGlow { 0%,100%{box-shadow:0 0 40px #0a1e3d88} 50%{box-shadow:0 0 55px #0a1e3daa} }
         .tap-cell { -webkit-tap-highlight-color: transparent; }
         .tap-cell:active { transform: scale(0.93) !important; }
+        ${WIN_CSS}
       `}</style>
 
       {/* Header */}
@@ -810,41 +873,59 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
               {cv==="X" && <WallShape cell={cell}/>}
               {isCrystal && (
                 <div style={{
-                  animation: isCrystalLit ? "crystalPulse 2s ease infinite" : "none",
-                  transition:"filter .4s ease",
+                  animation: won && isCrystalLit
+                    ? "crystalWin 1.2s ease infinite"
+                    : isCrystalLit
+                      ? "crystalPulse 2s ease infinite"
+                      : "none",
+                  transition: "filter .4s ease",
                 }}>
                   <CrystalShape color={cv.slice(1)} lit={isCrystalLit} cell={cell}/>
+                  {/* Rising star emerges from each lit crystal on win */}
+                  {won && isCrystalLit && (
+                    <RisingStar
+                      color={cv.slice(1) === "any" ? "#6bcbff" : cv.slice(1)}
+                      originX={cell * 0.5 - 14}
+                      originY={-cell * 0.5}
+                    />
+                  )}
                 </div>
               )}
             </div>
           );
         }))}
 
-        {won && <WinOverlay onNext={goNext} isLast={puzzleIdx===PUZZLES.length-1}/>}
+        {/* Beam brightens on win */}
+        <div style={{
+          position:"absolute", inset:0, pointerEvents:"none", zIndex:5,
+          animation: won ? "beamBrighten 1.5s ease infinite" : "none",
+        }}/>
       </div>
 
-      {/* Controls */}
-      <div style={{ display:"flex", gap:10, marginTop:16 }}>
-        <button onClick={reset} style={{
-          background:"#0c1828", color:"#6677aa",
-          border:"1px solid #ffffff0e", borderRadius:10,
-          padding:"11px 22px", fontSize:"0.83rem", fontWeight:600, cursor:"pointer",
-          touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
-          minHeight:44,
-        }}>↺ Reset</button>
-        <button onClick={() => setShowHint(h => !h)} style={{
-          background: showHint ? "#0d2010" : "#0c1828",
-          color: showHint ? "#a8ff6b" : "#6677aa",
-          border:`1px solid ${showHint ? "#a8ff6b33" : "#ffffff0e"}`,
-          borderRadius:10, padding:"11px 22px",
-          fontSize:"0.83rem", fontWeight:600, cursor:"pointer",
-          touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
-          minHeight:44, transition:"all .2s",
-        }}>💡 Hint</button>
-      </div>
+      {/* Controls — hidden while win toast is showing */}
+      {!won && (
+        <div style={{ display:"flex", gap:10, marginTop:16 }}>
+          <button onClick={reset} style={{
+            background:"#0c1828", color:"#6677aa",
+            border:"1px solid #ffffff0e", borderRadius:10,
+            padding:"11px 22px", fontSize:"0.83rem", fontWeight:600, cursor:"pointer",
+            touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
+            minHeight:44,
+          }}>↺ Reset</button>
+          <button onClick={() => setShowHint(h => !h)} style={{
+            background: showHint ? "#0d2010" : "#0c1828",
+            color: showHint ? "#a8ff6b" : "#6677aa",
+            border:`1px solid ${showHint ? "#a8ff6b33" : "#ffffff0e"}`,
+            borderRadius:10, padding:"11px 22px",
+            fontSize:"0.83rem", fontWeight:600, cursor:"pointer",
+            touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
+            minHeight:44, transition:"all .2s",
+          }}>💡 Hint</button>
+        </div>
+      )}
 
       {/* Hint text */}
-      {showHint && (
+      {showHint && !won && (
         <div style={{
           marginTop:12, maxWidth:320, width:"100%",
           background:"#071a0a", border:"1px solid #a8ff6b1a",
@@ -856,22 +937,32 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
         </div>
       )}
 
-      {/* Legend */}
-      <div style={{
-        marginTop:18, display:"flex", gap:16,
-        flexWrap:"wrap", justifyContent:"center",
-      }}>
-        {[
-          { sym:"▬", label:"Mirror — tap to rotate", color:"#a0c4ff" },
-          { sym:"△", label:"Prism — splits light", color:"#cc88ff" },
-          { sym:"⬡", label:"Crystal — needs light", color:"#6bcbff" },
-        ].map(l=>(
-          <div key={l.label} style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ color:l.color, fontSize:13 }}>{l.sym}</span>
-            <span style={{ color:"#ffffff2a", fontSize:"0.75rem" }}>{l.label}</span>
-          </div>
-        ))}
-      </div>
+      {/* Win toast — slides up below grid, never blocks puzzle */}
+      {won && (
+        <WinToast
+          onNext={goNext}
+          isLast={puzzleIdx === PUZZLES.length - 1}
+        />
+      )}
+
+      {/* Legend — hidden while won to keep UI clean */}
+      {!won && (
+        <div style={{
+          marginTop:18, display:"flex", gap:16,
+          flexWrap:"wrap", justifyContent:"center",
+        }}>
+          {[
+            { sym:"▬", label:"Mirror — tap to rotate", color:"#a0c4ff" },
+            { sym:"△", label:"Prism — splits light", color:"#cc88ff" },
+            { sym:"⬡", label:"Crystal — needs light", color:"#6bcbff" },
+          ].map(l=>(
+            <div key={l.label} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <span style={{ color:l.color, fontSize:13 }}>{l.sym}</span>
+              <span style={{ color:"#ffffff2a", fontSize:"0.75rem" }}>{l.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
