@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useBeautyEngine } from "../hooks/useBeautyEngine";
 
 // ─── Constellation lines ──────────────────────────────────────────────────────
 // Once 3+ stars exist, draw connecting lines in order of solve time.
@@ -137,22 +138,26 @@ const TWINKLE_CSS = `
 `;
 
 // ─── Progress label ───────────────────────────────────────────────────────────
-function ProgressLabel({ totalSolved, totalPuzzles, pct }) {
-  const messages = [
-    "The sky holds its breath.",
-    "A single light returns.",
-    "The world begins to remember.",
-    "Stars are finding each other.",
-    "The constellation awakens.",
-  ];
-  const msg = messages[Math.min(totalSolved, messages.length - 1)];
-
+function ProgressLabel({ totalSolved, totalPuzzles, pct, worldMessage, stageName }) {
   return (
     <div style={{
       textAlign: "center",
       padding: "0 24px",
       animation: "fadeInSky .6s ease both",
     }}>
+      {/* Stage name — subtle, like a chapter title */}
+      {stageName && totalSolved > 0 && (
+        <div style={{
+          fontSize: "0.68rem",
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "#6bcbff44",
+          marginBottom: 6,
+        }}>
+          {stageName}
+        </div>
+      )}
       <div style={{
         fontFamily: "'Playfair Display', Georgia, serif",
         fontSize: "clamp(1.1rem, 4vw, 1.4rem)",
@@ -164,18 +169,18 @@ function ProgressLabel({ totalSolved, totalPuzzles, pct }) {
       </div>
       <div style={{
         fontSize: "0.82rem",
-        color: "#6bcbff66",
+        color: "#6bcbff55",
         fontStyle: "italic",
         marginBottom: 20,
         lineHeight: 1.5,
       }}>
-        {msg}
+        {worldMessage}
       </div>
 
       {/* Progress bar */}
       <div style={{
         width: "100%", maxWidth: 280, margin: "0 auto",
-        height: 3, background: "#ffffff0a", borderRadius: 2,
+        height: 3, background: "#ffffff08", borderRadius: 2,
         overflow: "hidden",
       }}>
         <div style={{
@@ -184,13 +189,13 @@ function ProgressLabel({ totalSolved, totalPuzzles, pct }) {
           background: pct === 100
             ? "linear-gradient(90deg,#a8ff6b,#6bcbff)"
             : "linear-gradient(90deg,#1a4a7a,#6bcbff)",
-          transition: "width 1s ease",
-          boxShadow: pct > 0 ? "0 0 6px #6bcbff88" : "none",
+          transition: "width 1.2s ease",
+          boxShadow: pct > 0 ? "0 0 6px #6bcbff66" : "none",
         }}/>
       </div>
       <div style={{
-        fontSize: "0.72rem", color: "#ffffff22",
-        marginTop: 8, letterSpacing: "0.08em",
+        fontSize: "0.7rem", color: "#ffffff18",
+        marginTop: 8, letterSpacing: "0.1em",
       }}>
         {pct}% ILLUMINATED
       </div>
@@ -222,8 +227,37 @@ function EmptyState() {
   );
 }
 
+// ─── Ambient particles (drift upward, grow with restoration) ─────────────────
+function Particles({ count, color }) {
+  if (count === 0) return null;
+  const items = Array.from({ length: count }, (_, i) => {
+    const s = (n) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5; return x - Math.floor(x); };
+    return { x: s(1), delay: s(2) * 6, dur: 4 + s(3) * 5, size: 1 + s(4) * 2 };
+  });
+  return (
+    <>
+      {items.map((p, i) => (
+        <div key={i} style={{
+          position: "absolute",
+          left: `${p.x * 100}%`,
+          bottom: "10%",
+          width: p.size,
+          height: p.size,
+          borderRadius: "50%",
+          background: color,
+          boxShadow: `0 0 ${p.size * 3}px ${color}`,
+          opacity: 0.4,
+          animation: `particleDrift ${p.dur}s ${p.delay}s ease-in-out infinite`,
+          pointerEvents: "none",
+        }}/>
+      ))}
+    </>
+  );
+}
+
 // ─── SkyScreen ────────────────────────────────────────────────────────────────
 export default function SkyScreen({ stars, totalSolved, totalPuzzles, pct }) {
+  const beauty = useBeautyEngine(totalSolved);
   const prevCountRef = useRef(stars.length);
   const [newStarIds, setNewStarIds] = useState(new Set());
 
@@ -237,7 +271,6 @@ export default function SkyScreen({ stars, totalSolved, totalPuzzles, pct }) {
         .slice(0, stars.length - prev)
         .map(s => s.puzzleId);
       setNewStarIds(new Set(newest));
-      // Clear "new" flag after animation completes
       const t = setTimeout(() => setNewStarIds(new Set()), 2000);
       prevCountRef.current = stars.length;
       return () => clearTimeout(t);
@@ -245,43 +278,51 @@ export default function SkyScreen({ stars, totalSolved, totalPuzzles, pct }) {
     prevCountRef.current = stars.length;
   }, [stars.length]);
 
-  // Constellation line opacity: grows as more stars are added
-  const lineOpacity = Math.min(totalSolved / 3, 1);
-
   return (
     <div style={{
       minHeight: "100svh",
-      background: "radial-gradient(ellipse at 40% 20%, #0a1628 0%, #020810 60%)",
+      background: beauty.skyGradient,
       display: "flex",
       flexDirection: "column",
-      paddingBottom: 80, // nav bar clearance
+      paddingBottom: 80,
+      transition: "background 2s ease",
     }}>
-      <style>{TWINKLE_CSS}</style>
+      <style>{TWINKLE_CSS + `
+        @keyframes particleDrift {
+          0%   { transform: translateY(0)   scale(1);   opacity: 0.4; }
+          50%  { opacity: 0.7; }
+          100% { transform: translateY(-80px) scale(0); opacity: 0; }
+        }
+      `}</style>
 
-      {/* Sky canvas — fills most of the screen */}
-      <div style={{
-        flex: 1,
-        position: "relative",
-        minHeight: 0,
-        overflow: "hidden",
-      }}>
+      {/* Sky canvas */}
+      <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
+
+        {/* Horizon glow — grows with restoration */}
+        {beauty.horizonOpacity > 0 && (
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0,
+            height: "35%",
+            background: beauty.horizonGradient,
+            opacity: beauty.horizonOpacity,
+            transition: "opacity 2s ease",
+            pointerEvents: "none",
+          }}/>
+        )}
+
         <svg
-          width="100%"
-          height="100%"
-          style={{
-            position: "absolute", inset: 0,
-            display: "block",
-          }}
+          width="100%" height="100%"
+          style={{ position: "absolute", inset: 0, display: "block" }}
           preserveAspectRatio="xMidYMid slice"
         >
           <Nebula starCount={totalSolved} />
 
-          {/* Nebula blobs */}
-          <rect width="100%" height="100%" fill="url(#neb1)"/>
-          <rect width="100%" height="100%" fill="url(#neb2)"/>
-          <rect width="100%" height="100%" fill="url(#neb3)"/>
+          {/* Nebula blobs — opacity driven by beauty engine */}
+          <rect width="100%" height="100%" fill="url(#neb1)" opacity={beauty.nebulaOpacity}/>
+          <rect width="100%" height="100%" fill="url(#neb2)" opacity={beauty.nebulaOpacity * 0.7}/>
+          <rect width="100%" height="100%" fill="url(#neb3)" opacity={beauty.nebulaOpacity * 0.5}/>
 
-          {/* Background ambient stars */}
+          {/* Background ambient stars — opacity grows with restoration */}
           {BG_STARS.map((s, i) => (
             <circle
               key={i}
@@ -289,15 +330,16 @@ export default function SkyScreen({ stars, totalSolved, totalPuzzles, pct }) {
               cy={`${s.y * 100}%`}
               r={s.r}
               fill="white"
+              opacity={beauty.bgStarOpacity}
               style={{
                 animation: `${i % 3 === 0 ? "twinkle" : "twinkleSlow"} ${2.5 + s.delay}s ${s.delay}s ease-in-out infinite`,
               }}
             />
           ))}
 
-          {/* Constellation lines */}
+          {/* Constellation lines — opacity from beauty engine */}
           {totalSolved >= 2 && (
-            <ConstellationLines stars={stars} opacity={lineOpacity} />
+            <ConstellationLines stars={stars} opacity={beauty.lineOpacity} />
           )}
 
           {/* Restored stars */}
@@ -311,19 +353,25 @@ export default function SkyScreen({ stars, totalSolved, totalPuzzles, pct }) {
           ))}
         </svg>
 
-        {/* Empty state overlay */}
+        {/* Ambient particles — count and color from beauty engine */}
+        <Particles count={beauty.particles} color={beauty.particleColor} />
+
+        {/* Empty state */}
         {totalSolved === 0 && <EmptyState />}
       </div>
 
-      {/* Progress info */}
+      {/* Progress info — world message from beauty engine */}
       <div style={{
         padding: "20px 24px 16px",
-        background: "linear-gradient(to top, #020810 60%, transparent)",
+        background: `linear-gradient(to top, ${beauty.skyTo} 60%, transparent)`,
+        transition: "background 2s ease",
       }}>
         <ProgressLabel
           totalSolved={totalSolved}
           totalPuzzles={totalPuzzles}
           pct={pct}
+          worldMessage={beauty.worldMessage}
+          stageName={beauty.name}
         />
       </div>
     </div>
