@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 // {
@@ -72,9 +72,12 @@ export function useSaveData() {
     setSaveData(fresh);
   }, []);
 
-  const solvedPuzzleIds = new Set(saveData.stars.map(s => s.puzzleId));
-  const totalSolved     = saveData.stars.length;
-  const pct             = Math.round((totalSolved / TOTAL_PUZZLES) * 100);
+  const solvedPuzzleIds = useMemo(
+    () => new Set(saveData.stars.map(s => s.puzzleId)),
+    [saveData.stars]
+  );
+  const totalSolved = saveData.stars.length;
+  const pct         = Math.round((totalSolved / TOTAL_PUZZLES) * 100);
 
   return {
     stars: saveData.stars,
@@ -85,5 +88,4 @@ export function useSaveData() {
     recordSolve,
     clearSave,
   };
-          }
-                                  
+}
