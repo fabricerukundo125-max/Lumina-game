@@ -1,18 +1,11 @@
 import { useState } from "react";
-import { useSaveData } from "./hooks/useSaveData";
-import BottomNav       from "./components/BottomNav";
-import SkyScreen       from "./screens/SkyScreen";
-import SettingsScreen  from "./screens/SettingsScreen";
-import PuzzleScreen    from "./screens/PuzzleScreen";
-
-// ─── App ──────────────────────────────────────────────────────────────────────
-// Root component. Owns:
-//   - active tab ("play" | "sky" | "settings")
-//   - save data (via useSaveData hook)
-//   - passes onPuzzleSolved callback to PuzzleScreen
-//
-// PuzzleScreen manages its own intro, puzzle selection, and win states internally.
-// It calls onPuzzleSolved(puzzleId) when a puzzle is completed.
+import { useSaveData }     from "./hooks/useSaveData";
+import { useJournal }      from "./hooks/useJournal";
+import BottomNav           from "./components/BottomNav";
+import SkyScreen           from "./screens/SkyScreen";
+import SettingsScreen      from "./screens/SettingsScreen";
+import PuzzleScreen        from "./screens/PuzzleScreen";
+import JournalScreen       from "./screens/JournalScreen";
 
 export default function App() {
   const [tab, setTab] = useState("play");
@@ -27,23 +20,38 @@ export default function App() {
     clearSave,
   } = useSaveData();
 
+  const { entries, onPuzzleSolved: journalOnSolve } = useJournal(totalSolved);
+
+  // Called when a puzzle is won — updates both save system and journal
+  const handlePuzzleSolved = (puzzleId) => {
+    recordSolve(puzzleId);
+    // Pass new total after solve for milestone detection
+    journalOnSolve(puzzleId, totalSolved + 1);
+  };
+
   return (
     <div style={{ position: "relative", minHeight: "100svh", background: "#020810" }}>
 
-      {/* Screens — all mounted, visibility toggled so state is preserved */}
-      <div style={{ display: tab === "play" ? "block" : "none" }}>
+      <div style={{ display: tab === "play"     ? "block" : "none" }}>
         <PuzzleScreen
           solvedPuzzleIds={solvedPuzzleIds}
-          onPuzzleSolved={recordSolve}
+          onPuzzleSolved={handlePuzzleSolved}
         />
       </div>
 
-      <div style={{ display: tab === "sky" ? "block" : "none" }}>
+      <div style={{ display: tab === "sky"      ? "block" : "none" }}>
         <SkyScreen
           stars={stars}
           totalSolved={totalSolved}
           totalPuzzles={totalPuzzles}
           pct={pct}
+        />
+      </div>
+
+      <div style={{ display: tab === "journal"  ? "block" : "none" }}>
+        <JournalScreen
+          entries={entries}
+          totalSolved={totalSolved}
         />
       </div>
 
@@ -55,11 +63,11 @@ export default function App() {
         />
       </div>
 
-      {/* Bottom nav — always visible */}
       <BottomNav
         active={tab}
         onChange={setTab}
         starCount={totalSolved}
+        journalCount={entries.length}
       />
     </div>
   );
