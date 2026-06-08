@@ -462,5 +462,131 @@ export const PUZZLES = [
     crystals: [{ r: 2, c: 3, color: "#cc44cc" }],
     movable: ["2,2", "2,4"],
   },
+
+  // ── Hard Tier: Conceptual Puzzles (P29–P33) ─────────────────────────────────
+  // These puzzles require spatial reasoning, not just rotation.
+  // Key differences from P1–P28:
+  //   - Sources fire in multiple directions (R, D)
+  //   - Crystals appear in unexpected positions (left side, top-left)
+  //   - Some movables must NOT be rotated (correct answer = rot 0)
+  //   - Two beams cross without interacting
+  //   - Chain routing: beam must bounce 3 times
+
+  // P29: The Wrong Turn
+  // Beam goes RIGHT → DOWN (via \ that stays) → RIGHT (via / that rotates)
+  // Key insight: mirror at [1,2] must NOT rotate. Rot0=\ sends beam DOWN correctly.
+  // Verified: start=0, sol={1,2:rot0, 3,2:rot1}, 4/16 combos
+  {
+    id: 29,
+    title: "The Wrong Turn",
+    subtitle: "Not every beam goes where you expect",
+    hint: "One mirror should stay exactly where it is.",
+    grid: (() => {
+      const g = b();
+      g[1][2] = "\\"; // movable: must stay at rot0
+      g[3][2] = "/";   // movable: must rotate to rot1 (\)
+      g[3][6] = "C#ff6b6b";
+      return g;
+    })(),
+    sources:  [{ r: 1, c: 0, dir: "R", color: "#ff6b6b" }],
+    crystals: [{ r: 3, c: 6, color: "#ff6b6b" }],
+    movable:  ["1,2", "3,2"],
+  },
+
+  // P30: The Corner
+  // Source fires DOWN. Crystal is at top-LEFT — completely opposite corner.
+  // Beam must go DOWN → LEFT → UP to reach it.
+  // Verified: start=0, both movables rot1, 4/16 combos
+  {
+    id: 30,
+    title: "The Corner",
+    subtitle: "The light does not always go forward",
+    hint: "The source fires downward. Think about where you want it to end up.",
+    grid: (() => {
+      const g = b();
+      g[4][4] = "\\"; // movable A: D→RIGHT(away) at rot0. rot1=/ D→LEFT ✓
+      g[4][1] = "/";   // movable B: LEFT→RIGHT(away) at rot0. rot1=\ LEFT→UP ✓
+      g[0][1] = "C#6bcbff";
+      g[3][2] = "X";   // wall: blocks obvious direct path
+      return g;
+    })(),
+    sources:  [{ r: 0, c: 4, dir: "D", color: "#6bcbff" }],
+    crystals: [{ r: 0, c: 1, color: "#6bcbff" }],
+    movable:  ["4,4", "4,1"],
+  },
+
+  // P31: The U-Turn
+  // Crystal is to the LEFT of the source. Beam must go RIGHT first, then UP, then LEFT.
+  // The counter-intuitive move: go right to eventually reach something on the left.
+  // Verified: start=0, both movables rot1, 4/16 combos
+  {
+    id: 31,
+    title: "The U-Turn",
+    subtitle: "To go left, you must first go right",
+    hint: "The crystal is behind you. The beam must travel the long way around.",
+    grid: (() => {
+      const g = b();
+      g[4][4] = "\\"; // movable A: R→DOWN(away). rot1=/ R→UP ✓
+      g[1][4] = "/";   // movable B: UP→RIGHT(away). rot1=\ UP→LEFT ✓
+      g[1][0] = "C#a8ff6b"; // crystal at LEFT edge
+      g[3][2] = "X";   // wall: makes direct leftward path impossible
+      return g;
+    })(),
+    sources:  [{ r: 4, c: 0, dir: "R", color: "#a8ff6b" }],
+    crystals: [{ r: 1, c: 0, color: "#a8ff6b" }],
+    movable:  ["4,4", "1,4"],
+  },
+
+  // P32: The Crossroads
+  // Two sources: Red fires RIGHT, Blue fires DOWN. They cross at [3,3] (empty cell).
+  // Beams of different colors pass through each other — no interaction.
+  // Each beam needs its own mirror on the far side of the crossing.
+  // Verified: start=0, both movables rot1, 4/16 combos
+  {
+    id: 32,
+    title: "The Crossroads",
+    subtitle: "Two beams. Two paths. One crossing point.",
+    hint: "Beams of different colors pass through each other. Each needs its own mirror.",
+    grid: (() => {
+      const g = b();
+      g[0][5] = "/";          // fixed redirect for red
+      g[0][6] = "C#ff6b6b";  // red crystal
+      g[3][5] = "\\";        // movable for red beam
+      g[5][3] = "/";          // movable for blue beam
+      g[5][6] = "C#6bcbff";  // blue crystal
+      return g;
+    })(),
+    sources:  [
+      { r: 3, c: 0, dir: "R", color: "#ff6b6b" },
+      { r: 0, c: 3, dir: "D", color: "#6bcbff" },
+    ],
+    crystals: [
+      { r: 0, c: 6, color: "#ff6b6b" },
+      { r: 5, c: 6, color: "#6bcbff" },
+    ],
+    movable: ["3,5", "5,3"],
+  },
+
+  // P33: The Redirect Chain
+  // Three movables in a chain. Only the LAST one needs rotating.
+  // The first two must stay at rot0 — rotating them breaks the chain.
+  // Key insight: more movables does not mean more rotating.
+  // Verified: start=0, sol={3,2:rot0, 5,2:rot0, 5,4:rot1}, 8/64 combos
+  {
+    id: 33,
+    title: "The Redirect Chain",
+    subtitle: "Three mirrors. One must not move.",
+    hint: "Not every mirror needs rotating. The hardest part is knowing which one to leave alone.",
+    grid: (() => {
+      const g = b();
+      g[3][2] = "\\"; // A: must stay rot0 (\ sends beam DOWN)
+      g[5][2] = "\\"; // B: must stay rot0 (\ sends beam RIGHT)
+      g[5][4] = "\\"; // C: must rotate to rot1 (/ sends beam UP)
+      g[0][4] = "C#ff6b6b";
+      return g;
+    })(),
+    sources:  [{ r: 3, c: 0, dir: "R", color: "#ff6b6b" }],
+    crystals: [{ r: 0, c: 4, color: "#ff6b6b" }],
+    movable:  ["3,2", "5,2", "5,4"],
+  },
 ];
-                
