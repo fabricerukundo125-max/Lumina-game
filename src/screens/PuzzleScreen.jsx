@@ -570,4 +570,382 @@ export default function PuzzleScreen({ solvedPuzzleIds = new Set(), onPuzzleSolv
   if (screen === "intro") return (
     <div style={{
       minHeight:"100svh",
-      backgr
+      background:"radial-gradient(ellipse at 30% 20%,#0a1e3d,#04080f 65%)",
+      display:"flex", flexDirection:"column", alignItems:"center",
+      justifyContent:"center", fontFamily:"'Segoe UI',sans-serif",
+      padding:"40px 28px 96px", textAlign:"center",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
+        @keyframes floatAnim { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes glowPulse { 0%,100%{opacity:.65} 50%{opacity:1} }
+        @keyframes starDrift { 0%{transform:translateY(0);opacity:.7} 100%{transform:translateY(-18px);opacity:.1} }
+      `}</style>
+      {/* Stars */}
+      {Array.from({length:14},(_,i)=>(
+        <div key={i} style={{
+          position:"fixed",
+          left:`${4+(i*7)}%`, top:`${8+Math.sin(i*1.3)*38}%`,
+          width:2.5, height:2.5, borderRadius:"50%",
+          background:["#6bcbff","#ff6b6b","#a8ff6b","#cc88ff"][i%4],
+          animation:`starDrift ${2.8+i*0.35}s ${i*0.25}s ease-in-out infinite alternate`,
+          opacity:.4, pointerEvents:"none",
+        }}/>
+      ))}
+      <div style={{ fontSize:80, animation:"floatAnim 3s ease-in-out infinite", marginBottom:20 }}>✨</div>
+      <h1 style={{
+        fontFamily:"'Playfair Display',serif",
+        fontSize:"clamp(2.8rem,10vw,4.2rem)", fontWeight:900,
+        color:"#e8f4ff", margin:"0 0 10px", animation:"glowPulse 2.5s ease infinite",
+      }}>Lumina</h1>
+      <p style={{ color:"#6bcbff88", fontSize:"1rem", maxWidth:300, lineHeight:1.65, marginBottom:40 }}>
+        Guide beams of light.<br/>Illuminate a forgotten world.
+      </p>
+      <div style={{ display:"flex", gap:28, marginBottom:44, justifyContent:"center" }}>
+        {[["Tap mirrors","to rotate"],["Guide beams","to crystals"],["No timers","no pressure"]].map(([a,b],i)=>(
+          <div key={i} style={{ textAlign:"center" }}>
+            <div style={{ color:"#6bcbff", fontWeight:600, fontSize:"0.8rem", marginBottom:3 }}>{a}</div>
+            <div style={{ color:"#ffffff44", fontSize:"0.75rem" }}>{b}</div>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => setScreen("game")}
+        style={{
+          background:"linear-gradient(135deg,#1a4a7a,#0d2a4a)",
+          color:"#6bcbff", border:"1px solid #6bcbff55",
+          borderRadius:14, padding:"15px 44px",
+          fontSize:"1.05rem", fontWeight:700, cursor:"pointer",
+          letterSpacing:"0.07em", boxShadow:"0 0 28px #6bcbff2a",
+        }}>
+        Begin →
+      </button>
+    </div>
+  );
+
+  // ── Game screen ───────────────────────────────────────────────
+  return (
+    <div style={{
+      minHeight:"100svh",
+      background:"radial-gradient(ellipse at 20% 8%,#0a1e3d,#03070d 55%)",
+      display:"flex", flexDirection:"column", alignItems:"center",
+      fontFamily:"'Segoe UI',sans-serif", padding:"16px 16px 96px",
+      userSelect:"none", touchAction:"manipulation",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap');
+        @keyframes crystalPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.5)} }
+        @keyframes gridGlow { 0%,100%{box-shadow:0 0 40px #0a1e3d88} 50%{box-shadow:0 0 55px #0a1e3daa} }
+        @keyframes starRise {
+          0%   { transform: translateY(0) scale(0.4); opacity: 0; }
+          15%  { opacity: 1; }
+          80%  { opacity: 0.9; }
+          100% { transform: translateY(-220px) scale(1.1); opacity: 0; }
+        }
+        @keyframes toastSlideUp {
+          from { transform: translateY(24px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes continueFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0);   }
+        }
+        @keyframes beamBrighten {
+          0%,100% { filter: brightness(1); }
+          50%     { filter: brightness(1.7) drop-shadow(0 0 6px #6bcbff); }
+        }
+        @keyframes crystalWin {
+          0%,100% { filter: brightness(1.2) drop-shadow(0 0 6px currentColor); }
+          50%     { filter: brightness(2.4) drop-shadow(0 0 18px currentColor); }
+        }
+        .tap-cell { -webkit-tap-highlight-color: transparent; }
+        .tap-cell:active { transform: scale(0.93) !important; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{
+        width:"100%", maxWidth:500,
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        marginBottom:14,
+      }}>
+        <h1 style={{
+          fontFamily:"'Playfair Display',serif",
+          fontSize:"1.45rem", fontWeight:900, color:"#e8f4ff", margin:0,
+        }}>✨ Lumina</h1>
+        <div style={{ display:"flex", gap:6 }}>
+          {PUZZLES.map((_,i)=>(
+            <button key={i} onClick={()=>selectPuzzle(i)}
+              style={{
+                width:36, height:36, borderRadius:8,
+                background: i===puzzleIdx ? "#1a4a7a"
+                  : completed.has(i) ? "#0d2e1a" : "#0d1724",
+                border:`1.5px solid ${i===puzzleIdx ? "#6bcbff"
+                  : completed.has(i) ? "#a8ff6b55" : "#ffffff12"}`,
+                color: i===puzzleIdx ? "#6bcbff"
+                  : completed.has(i) ? "#a8ff6b" : "#ffffff33",
+                fontSize:"0.72rem", fontWeight:700, cursor:"pointer",
+                transition:"all .2s", touchAction:"manipulation",
+                WebkitTapHighlightColor:"transparent",
+              }}>
+              {completed.has(i) ? "✓" : i+1}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Puzzle title */}
+      <div style={{ textAlign:"center", marginBottom:12, width:"100%", maxWidth:500 }}>
+        <div style={{
+          fontFamily:"'Playfair Display',serif",
+          fontSize:"1.1rem", fontWeight:700, color:"#ddeeff", marginBottom:3,
+        }}>{puzzle.title}</div>
+        <div style={{ color:"#6bcbff55", fontSize:"0.8rem" }}>{puzzle.subtitle}</div>
+      </div>
+
+      {/* Crystal progress */}
+      <div style={{ width:"100%", maxWidth:500, marginBottom:12 }}>
+        <div style={{
+          height:3, background:"#0d1a2e", borderRadius:2, overflow:"hidden",
+        }}>
+          <div style={{
+            height:"100%", borderRadius:2,
+            background: litCount===totalCrystals
+              ? "linear-gradient(90deg,#a8ff6b,#6bcbff)"
+              : "linear-gradient(90deg,#1a4a7a,#4488cc)",
+            width:`${(litCount/totalCrystals)*100}%`,
+            transition:"width 0.4s ease",
+            boxShadow: litCount===totalCrystals ? "0 0 6px #a8ff6b" : "none",
+          }}/>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{
+        position:"relative", width:size, height:size,
+        borderRadius:14, overflow:"hidden",
+        border:"1px solid #ffffff0c",
+        boxShadow:"0 0 50px #020810, inset 0 0 30px #000000bb",
+        // Restoration: background transitions to sceneAfter on win
+        background: sceneActive && puzzle.sceneAfter
+          ? puzzle.sceneAfter
+          : puzzle.sceneBefore || "radial-gradient(ellipse at 50% 50%,#091526,#020810)",
+        transition: "background 2s ease",
+        animation: sceneActive ? "none" : "gridGlow 4s ease infinite",
+      }}>
+        {/* Grid lines */}
+        <svg style={{ position:"absolute", inset:0, opacity:0.055, pointerEvents:"none" }}
+          width={size} height={size}>
+          {Array.from({length:GRID+1},(_,i)=>(
+            <g key={i}>
+              <line x1={i*cell} y1={0} x2={i*cell} y2={size} stroke="#6bcbff" strokeWidth="0.5"/>
+              <line x1={0} y1={i*cell} x2={size} y2={i*cell} stroke="#6bcbff" strokeWidth="0.5"/>
+            </g>
+          ))}
+        </svg>
+
+        {/* Beams */}
+        <BeamCanvas segments={segments} cell={cell}/>
+
+        {/* Constellation lines — for sequence puzzles, draw lines between lit crystals */}
+        {puzzle.sequence && litCrystals.size >= 2 && (() => {
+          const litSeq = puzzle.sequence.filter(k => litCrystals.has(k));
+          return (
+            <svg style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:3 }}
+              width={size} height={size}>
+              {litSeq.slice(0,-1).map((k,i) => {
+                const [r1,c1] = k.split(",").map(Number);
+                const [r2,c2] = litSeq[i+1].split(",").map(Number);
+                return (
+                  <line key={k}
+                    x1={c1*cell+cell/2} y1={r1*cell+cell/2}
+                    x2={c2*cell+cell/2} y2={r2*cell+cell/2}
+                    stroke="#ffcc44" strokeWidth="1.5"
+                    strokeOpacity="0.6" strokeDasharray="4 3"
+                  />
+                );
+              })}
+            </svg>
+          );
+        })()}
+
+        {/* Source overlays */}
+        {puzzle.sources.map((s,i) => (
+          <div key={i} style={{
+            position:"absolute", left:s.c*cell, top:s.r*cell,
+            width:cell, height:cell,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            pointerEvents:"none",
+          }}>
+            <SourceShape color={s.color} dir={s.dir} cell={cell}/>
+          </div>
+        ))}
+
+        {/* Cell elements */}
+        {puzzle.grid.map((row,r) => row.map((cv,c) => {
+          if (!cv) return null;
+          const key   = `${r},${c}`;
+          const isMovable = puzzle.movable.includes(key);
+          const rot   = rotations[key] || 0;
+          const isCrystalLit = litCrystals.has(key);
+          const isMirror  = cv === "/" || cv === "\\";
+          const isCrystal = cv.startsWith("C");
+          const isMix     = cv.startsWith("M");
+
+          return (
+            <div key={key}
+              className={isMovable ? "tap-cell" : ""}
+              onClick={() => isMovable && handleCellTap(r,c)}
+              style={{
+                position:"absolute", left:c*cell, top:r*cell,
+                width:cell, height:cell,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                cursor: isMovable ? "pointer" : "default",
+                transition:"transform .1s",
+              }}>
+              {isMirror && (
+                <div style={{ position:"relative" }}>
+                  <MirrorShape type={cv} rotation={rot} cell={cell}/>
+                  {isMovable && (
+                    <div style={{
+                      position:"absolute", bottom:-5, right:-5,
+                      width:12, height:12, borderRadius:"50%",
+                      background:"#6bcbff1a", border:"1px solid #6bcbff33",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:7, color:"#6bcbff66", pointerEvents:"none",
+                    }}>↻</div>
+                  )}
+                </div>
+              )}
+              {cv==="P" && <PrismShape cell={cell}/>}
+              {cv==="X" && <WallShape cell={cell}/>}
+              {isCrystal && (
+                <div style={{
+                  animation: won && isCrystalLit
+                    ? "crystalWin 1.2s ease infinite"
+                    : isCrystalLit
+                      ? "crystalPulse 2s ease infinite"
+                      : "none",
+                  transition: "filter .4s ease",
+                  position: "relative",
+                }}>
+                  <CrystalShape color={cv.slice(1)} lit={isCrystalLit} cell={cell}/>
+                  {/* Sequence number badge */}
+                  {puzzle.sequence && (() => {
+                    const idx = puzzle.sequence.indexOf(key);
+                    if (idx === -1) return null;
+                    return (
+                      <div style={{
+                        position:"absolute", top:-4, right:-4,
+                        width:14, height:14, borderRadius:"50%",
+                        background: isCrystalLit ? "#ffcc44" : "#1a2d4a",
+                        border:`1px solid ${isCrystalLit ? "#ffcc44" : "#ffffff22"}`,
+                        color: isCrystalLit ? "#000" : "#ffffff55",
+                        fontSize:8, fontWeight:800,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        zIndex:10, pointerEvents:"none",
+                      }}>{idx+1}</div>
+                    );
+                  })()}
+                  {won && isCrystalLit && (
+                    <RisingStar
+                      color={cv.slice(1) === "any" ? "#6bcbff" : cv.slice(1)}
+                      originX={cell * 0.5 - 14}
+                      originY={-cell * 0.5}
+                    />
+                  )}
+                </div>
+              )}
+              {/* Mix crystal — lights when correct color combo passes through */}
+              {cv.startsWith("M") && (() => {
+                const needed = cv.slice(1);
+                const isMixLit = litCrystals.has(key);
+                return (
+                  <div style={{
+                    width: cell*0.55, height: cell*0.55,
+                    borderRadius: "50%",
+                    background: isMixLit ? needed : "transparent",
+                    border: `2px solid ${isMixLit ? needed : "#ffffff22"}`,
+                    boxShadow: isMixLit ? `0 0 12px ${needed}, 0 0 24px ${needed}88` : "none",
+                    transition: "all 0.4s ease",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize: cell*0.18, color: "#ffffff88",
+                  }}>
+                    {!isMixLit && "✦"}
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        }))}
+
+        {/* Beam brightens on win */}
+        <div style={{
+          position:"absolute", inset:0, pointerEvents:"none", zIndex:5,
+          animation: won ? "beamBrighten 1.5s ease infinite" : "none",
+        }}/>
+      </div>
+
+      {/* Controls — hidden while win toast is showing */}
+      {!won && (
+        <div style={{ display:"flex", gap:10, marginTop:16 }}>
+          <button onClick={reset} style={{
+            background:"#0c1828", color:"#6677aa",
+            border:"1px solid #ffffff0e", borderRadius:10,
+            padding:"11px 22px", fontSize:"0.83rem", fontWeight:600, cursor:"pointer",
+            touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
+            minHeight:44,
+          }}>↺ Reset</button>
+          <button onClick={() => setShowHint(h => !h)} style={{
+            background: showHint ? "#0d2010" : "#0c1828",
+            color: showHint ? "#a8ff6b" : "#6677aa",
+            border:`1px solid ${showHint ? "#a8ff6b33" : "#ffffff0e"}`,
+            borderRadius:10, padding:"11px 22px",
+            fontSize:"0.83rem", fontWeight:600, cursor:"pointer",
+            touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
+            minHeight:44, transition:"all .2s",
+          }}>💡 Hint</button>
+        </div>
+      )}
+
+      {/* Hint text */}
+      {showHint && !won && (
+        <div style={{
+          marginTop:12, maxWidth:320, width:"100%",
+          background:"#071a0a", border:"1px solid #a8ff6b1a",
+          borderRadius:10, padding:"11px 16px",
+          color:"#a8ff6b88", fontSize:"0.82rem",
+          lineHeight:1.6, textAlign:"center",
+        }}>
+          {puzzle.hint}
+        </div>
+      )}
+
+      {/* Win toast — slides up below grid, never blocks puzzle */}
+      {won && (
+        <WinToast
+          onNext={goNext}
+          isLast={puzzleIdx === PUZZLES.length - 1}
+        />
+      )}
+
+      {/* Legend — hidden while won to keep UI clean */}
+      {!won && (
+        <div style={{
+          marginTop:18, display:"flex", gap:16,
+          flexWrap:"wrap", justifyContent:"center",
+        }}>
+          {[
+            { sym:"▬", label:"Mirror — tap to rotate", color:"#a0c4ff" },
+            { sym:"△", label:"Prism — splits light", color:"#cc88ff" },
+            { sym:"⬡", label:"Crystal — needs light", color:"#6bcbff" },
+          ].map(l=>(
+            <div key={l.label} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <span style={{ color:l.color, fontSize:13 }}>{l.sym}</span>
+              <span style={{ color:"#ffffff2a", fontSize:"0.75rem" }}>{l.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
