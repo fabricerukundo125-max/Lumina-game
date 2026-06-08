@@ -9,7 +9,7 @@ import { useState, useCallback, useMemo } from "react";
 // }
 
 const STORAGE_KEY = "lumina_save_v1";
-const TOTAL_PUZZLES = 28; // update when more puzzles are added
+const TOTAL_PUZZLES = 33; // update when more puzzles are added
 
 // Deterministic star position from puzzleId — same puzzle always maps to same
 // position so the constellation is stable across sessions.
